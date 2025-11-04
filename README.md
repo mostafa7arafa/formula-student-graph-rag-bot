@@ -1,137 +1,191 @@
 # 🤖 AI Agent for Formula Student Rules (LightRAG + n8n)
 
-This project demonstrates an intelligent AI agent capable of answering complex and relational questions about the Formula Student Germany (FSG) rules. It leverages a **Graph RAG** approach using **LightRAG** to build a structured knowledge base from the official PDF rulebook, and **n8n** to orchestrate the AI agent's interaction with the user and the knowledge base.
+> **An intelligent AI agent that understands and answers complex Formula Student Germany (FSG) rules using a graph-based knowledge approach.**
 
-The primary goal is to provide precise, context-aware answers, especially for questions involving intricate relationships between different rules and concepts within the highly structured FSG rulebook.
+This project demonstrates an **AI-powered rules assistant** capable of answering **complex, relational, and multi-hop questions** about the Formula Student Germany (FSG) rulebook.
+
+It uses:
+
+* 🧠 **[LightRAG](https://github.com/HKUDS/LightRAG)** to build a *graph-structured knowledge base* from the official FSG rulebook PDF.
+* 🔄 **[n8n](https://n8n.io/)** to orchestrate the AI agent’s workflow and interaction between the user and LightRAG.
+
+The goal: to deliver **precise, context-aware answers** that go beyond keyword searches by understanding the **relationships** and **dependencies** between rules.
+
+---
 
 ## 🌟 Why Graph RAG? (Naive RAG vs. Graph RAG)
 
-For complex, interlinked documents like rulebooks, a "Naive RAG" (simple chunk-based retrieval) often falls short. A single rule (e.g., `T14.5.8`) might reference another rule (`A6.6`), which in turn depends on a safety standard (`T13.1`). A Naive RAG struggles to follow these complex, multi-hop connections.
+For complex, interlinked documents like rulebooks, a traditional "Naive RAG" (chunk-based retrieval) often fails to capture context.
+A single rule (e.g., `T14.5.8`) might reference another (`A6.6`) or a safety standard (`T13.1`).
+A Naive RAG can’t easily follow these multi-hop relationships.
 
-This project employs a **Graph RAG** approach to overcome these limitations. LightRAG extracts entities (key concepts) and their relationships, forming a navigable knowledge graph.
+**Graph RAG** solves this by structuring the rulebook as a *knowledge graph* — enabling the agent to reason about *how* concepts connect.
 
-| Feature | Naive RAG (Simple Chunks) | Graph RAG (LightRAG) |
-| :--- | :--- | :--- |
-| **How it Works** | Finds and "stuffs" raw text chunks based on keyword matching. | Finds precise concepts (`entities`) and their `relationships` in a structured graph. |
-| **Context Quality** | Context can be "noisy," redundant, and include irrelevant paragraphs. | Context is precise, clean, and explicitly shows *how* concepts are linked. |
-| **Query Type** | Good for simple, fact-based definitions ("What is a TSMS?"). | **Excellent** for complex, relational, and multi-hop questions ("What is the relationship between the ASMS and the shutdown circuit?"). |
-| **Retrieval Mechanism** | `User Query` ➔ `Vector Search` ➔ `Top K Chunks` | `User Query` ➔ `LLM-Guided Graph Search` ➔ `Relevant Entities + Relationships + Source Chunks` |
-| **Answer Quality** | Often requires the LLM to synthesize information from disjointed text, prone to less precise answers or "context stuffing." | Provides highly relevant, interconnected context, allowing the LLM to generate more accurate, concise, and nuanced answers. |
-| **Robustness** | Can struggle with implied connections or rules spanning multiple sections. | Excels at understanding the *structure* of the rules, leading to more robust answers for complex scenarios. |
+| Feature             | Naive RAG (Simple Chunks)             | Graph RAG (LightRAG)                                |
+| :------------------ | :------------------------------------ | :-------------------------------------------------- |
+| **Retrieval**       | Keyword-based text chunk search       | Graph search using entities + relationships         |
+| **Context Quality** | Often redundant or noisy              | Clean, structured, and relational                   |
+| **Best For**        | Simple factual queries                | Complex, multi-rule reasoning                       |
+| **Mechanism**       | `User → Vector Search → Top-K Chunks` | `User → LLM-Guided Graph Search → Entities + Links` |
+| **Answer Quality**  | Prone to disjointed synthesis         | Accurate, context-rich, and interpretable           |
 
-By using LightRAG, this agent can understand the *structure* of the rules, not just the words, leading to far more accurate and insightful answers.
+> 🧩 *LightRAG understands the structure of the rules — not just their text.*
 
-## 🤖 Tech Stack
+---
 
-* **AI Agent Orchestration:** [n8n](https://n8n.io/)
-* **Knowledge Base & Graph RAG:** [LightRAG](https://github.com/HKUDS/LightRAG)
-* **Large Language Model (LLM):** OpenAI `gpt-4o-mini`
-* **Embedding Model:** OpenAI `text-embedding-3-small`
-* **Containerization:** Docker & Docker Compose
+## 🧰 Tech Stack
 
-## 🏗️ Architecture
+| Component                | Tool                                          |
+| :----------------------- | :-------------------------------------------- |
+| **Agent Orchestration**  | [n8n](https://n8n.io/)                        |
+| **Graph Knowledge Base** | [LightRAG](https://github.com/HKUDS/LightRAG) |
+| **LLM**                  | OpenAI `gpt-4o-mini`                          |
+| **Embedding Model**      | OpenAI `text-embedding-3-small`               |
+| **Containerization**     | Docker & Docker Compose                       |
 
-This project implements a Retrieval-Augmented Generation (RAG) pipeline designed for efficiency and accuracy:
+---
 
-1.  **User Interaction (n8n):** A user submits a query through the n8n chat interface.
-2.  **AI Agent (n8n):** The n8n AI Agent receives the query and acts as the orchestrator.
-3.  **Context Retrieval (LightRAG):** The n8n Agent calls the LightRAG server's `/query/data` endpoint via an HTTP Request node. Crucially, it sends the `query` along with `"only_need_context": true`.
-4.  **Graph Search (LightRAG):** LightRAG uses its internal LLM to understand the query, performs a sophisticated graph search across its knowledge base (built from the FSG rules PDF), and retrieves relevant entities, relationships, and supporting text chunks.
-5.  **Context Return (LightRAG):** Because of `"only_need_context": true`, LightRAG returns a clean JSON object containing only the retrieved context (entities, relationships, and chunks) **without** making an expensive LLM call for generation. This significantly reduces costs.
-6.  **Answer Generation (n8n):** The n8n AI Agent receives this structured context. It then utilizes its own integrated LLM (`gpt-4o-mini`) to synthesize a human-readable and accurate answer based on the provided context.
+## 🏗️ Architecture Overview
+
+1. 🗣️ **User Query:** A user submits a question via n8n chat interface.
+2. 🤖 **n8n AI Agent:** Acts as the orchestrator, forwarding the query to LightRAG.
+3. 🔍 **LightRAG Search:** Performs graph-based retrieval (`only_need_context: true`) to find entities, relationships, and text chunks.
+4. 📦 **Structured Context:** Returns only the retrieved context (no LLM generation yet).
+5. 💬 **Final Answer:** n8n’s LLM (`gpt-4o-mini`) synthesizes a clear, human-readable answer from the structured context.
+
+> ⚡ *This design minimizes cost and latency by separating retrieval and generation.*
+
+---
 
 ## 🚀 Getting Started
 
-### Prerequisites
+### ✅ Prerequisites
 
-Before you begin, ensure you have the following installed and running:
+You’ll need:
 
-* **Docker Desktop:** Essential for running the LightRAG server.
-* **n8n:** A self-hosted or cloud instance of n8n where you can import and run the workflow.
-* **OpenAI API Key:** Required for both LightRAG's embeddings and n8n's LLM generation.
+* **Docker Desktop** – to run the LightRAG server.
+* **n8n** – self-hosted or cloud.
+* **OpenAI API key** – for both embeddings and LLM calls.
 
-### 1. Set up LightRAG
+### 1️⃣ Set Up LightRAG
 
-1.  **Clone the Repository:**
-    ```bash
-    git clone [https://github.com/your-username/your-repo-name.git](https://github.com/your-username/your-repo-name.git)
-    cd your-repo-name
-    ```
-2.  **Create Environment File:** Copy the example environment file and create your `.env` file.
-    ```bash
-    cp .env.example .env
-    ```
-3.  **Configure API Key:** Open the newly created `.env` file and replace `sk-YOUR_KEY_HERE` with your actual OpenAI API Key.
-    ```ini
-    # .env
-    OPENAI_API_KEY=sk-YOUR_KEY_HERE
-    LLM_BINDING=openai
-    LLM_MODEL=gpt-4o-mini
-    EMBEDDING_BINDING=openai
-    EMBEDDING_MODEL=text-embedding-3-small
-    # ... other LightRAG settings
-    ```
-4.  **Start LightRAG Server:**
-    ```bash
-    docker compose up -d
-    ```
-    This will start the LightRAG server in detached mode.
+```bash
+git clone https://github.com/mostafa7arafa/formula-student-graph-rag-bot.git
+cd formula-student-graph-rag-bot
+cp .env.example .env
+```
 
-### 2. Set up n8n Workflow
+Edit `.env` to add your OpenAI key:
 
-1.  **Import Workflow:**
-    * Open your n8n instance.
-    * Navigate to "Workflows" and click "New".
-    * Click the "Import" button (often a cloud icon with an arrow).
-    * Select "From File" and upload the `workflow.json` file from this repository.
-2.  **Configure HTTP Request Node:**
-    * Locate the "HTTP Request" node within the imported workflow.
-    * Ensure the URL in this node points to your LightRAG server.
-        * If n8n is running on the same machine as Docker, use `http://host.docker.internal:9621/query/data`.
-        * If n8n is on a different machine or cloud, replace `host.docker.internal` with the actual IP address or hostname where your LightRAG Docker container is accessible.
-3.  **Activate Workflow:** Save and activate the n8n workflow.
+```ini
+OPENAI_API_KEY=sk-YOUR_KEY_HERE
+LLM_MODEL=gpt-4o-mini
+EMBEDDING_MODEL=text-embedding-3-small
+```
 
-### 3. Ingest Formula Student Rules PDF
+Then start the server:
 
-1.  **Access LightRAG UI:** Open your web browser and go to `http://localhost:9621`.
-2.  **Upload Document:** Navigate to the "Documents" tab.
-3.  **Upload PDF:** Click "Upload Document" and select your Formula Student rules PDF (e.g., `FS-Rules_2025_v1.1.pdf`).
-4.  **Monitor Ingestion:** LightRAG will now process the PDF, extract entities and relationships, and build its knowledge graph. Monitor the status until it shows "Completed".
+```bash
+docker compose up -d
+```
 
-## ⚡ How to Use
+### 2️⃣ Set Up n8n Workflow
 
-Once both LightRAG is running and ingested the document, and your n8n workflow is active, you can interact with the AI agent:
+1. Import both:
 
-1.  Open the chat interface within your n8n workflow.
-2.  Start asking questions about the Formula Student rules!
+   * `workflow - Formula Student Rag.json`
+2. Update the **HTTP Request node** URL:
 
-### Example Questions:
+   * Local: `http://host.docker.internal:9621/query/data`
+   * Remote: use the actual host/IP of the LightRAG container.
+3. Save and activate both workflows.
 
-* "What is the rule for the Tractive System Active Light (TSAL)?"
-* "Explain the relationship between the Safety Decoupling Controller (SDC) and the Autonomous System Brake (ASB)."
-* "During an autonomous Trackdrive mission, if the perception system fails and the RES operator presses the emergency button, what is the required state of the AS-Status lights and why?"
-* "Under what conditions is a kill switch required for the Tractive System?"
+### 3️⃣ Ingest the FSG Rules PDF
 
-## 📸 Photos & Screenshots
+1. Go to `http://localhost:9621`
+2. Upload the rulebook (e.g., `FS-Rules_2025_v1.1.pdf`)
+3. Wait until the ingestion status shows **Completed**
 
-Here are some visual aids to help understand the project setup and functionality.
+---
 
-### n8n Workflow Overview
-A screenshot of the n8n workflow, showing both AI Agents the Naive Rag and LightGraph Rag one, and how they connect.
+## 💡 How to Use
 
-![n8n Workflow Screenshot- Naive Rag](images/Formula%20Student%20-%20Naive%20Rag.png)
+Once both LightRAG and n8n are active:
 
-![n8n Workflow Screenshot- LightGraph Rag](images/Formula%20Student%20-%20LightGraph%20Rag.png)
+1. Open the n8n chat interface.
+2. Ask questions to **both** Naive and Graph RAG workflows to compare.
 
-### LightRAG Knowledge Graph Visualization
-A screenshot from the LightRAG UI showing a portion of the generated knowledge graph, highlighting entities and relationships.
+**Example queries:**
+
+* “What is the rule for the Tractive System Active Light (TSAL)?”
+* “Explain the relationship between the ASMS and the Shutdown Circuit (SDC).”
+* “If the RES operator presses the emergency button during autonomous Trackdrive, what happens to the AS-Status lights?”
+
+---
+
+## ⚖️ RAG Comparison Showcase
+
+### 🔍 Example 1 – Relational Question
+
+**Query:** 
+
+> *What is the relationship between the ASMS and the SDC?*
+
+| ✅ Graph RAG (LightRAG)                                                       | ❌ Naive RAG                                      |
+| :--------------------------------------------------------------------------- | :----------------------------------------------- |
+| Correctly explains the dependency: the SDC can only close if the ASMS is on. | Returns disconnected definitions for both terms. |
+| **→ Graph RAG demonstrates relational understanding.**                       | **→ Naive RAG misses the logical link.**         |
+
+---
+
+### 🔎 Example 2 – Complex Multi-Hop Scenario
+
+**Query:**
+
+> *During an autonomous Trackdrive, the perception system fails, triggering a 'Track Lost' state. Before the car stops, the RES operator presses the emergency button. What is the required state of the AS-Status lights?*
+
+| ✅ **Graph RAG (LightRAG)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | ❌ **Naive RAG (Simple Chunks)**                                                                                                                                                                                                                                                     |
+| :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Response:**<br>In the event of a perception system failure during an autonomous Trackdrive that triggers a *‘Track Lost’* state, pressing the RES emergency button transitions the vehicle into an **‘AS Emergency’** state.<br><br>**Required AS-Status Lights State:**<br>• The **ASSIs (Autonomous System Status Indicators)** must visually reflect the *‘AS Emergency’* state.<br>• An **intermittent sound** must alert personnel to the critical situation.<br>• At least **one ASSI must be visible from any angle**, showing the corresponding illumination of the emergency state.<br><br>These measures ensure full compliance with the safety requirements in the FSG rules.<br><br>**Reference:** FS-Rules_2025_v1.1.pdf | **Response:**<br>The vehicle enters the *“AS Emergency”* state.<br>According to T 14.9.1 and Figure 15, the AS-Status lights must show: **Blue continuous illumination.**<br><br>**Issue:** This is incorrect — “Blue continuous” corresponds to *AS Finished*, not *AS Emergency*. |
+
+> **Analysis:**
+> 🧩 *The Graph RAG answer demonstrates reasoning across multiple sections — connecting “Track Lost” → “RES Pressed” → “AS Emergency” → “ASSI + sound requirements”.*
+> In contrast, the Naive RAG hallucinates a confident but **incorrect** color indication due to lack of relational understanding.
+
+---
+
+## 📸 Visuals
+
+### 🧩 n8n Workflows
+
+![Naive RAG Workflow](images/Formula%20Student%20-%20Naive%20Rag.png)
+![Graph RAG Workflow](images/Formula%20Student%20-%20LightGraph%20Rag.png)
+
+### 🕸️ LightRAG Knowledge Graph
 
 ![LightRAG Graph Visualization](images/lightrag_graph_visualization.gif)
 
+---
 
-## ⚙️ Key Configuration & Cost Optimization
+## ⚙️ Configuration Tips
 
-* **LightRAG `.env`:** The `LLM_MODEL=gpt-4o-mini` and `EMBEDDING_MODEL=text-embedding-3-small` define the underlying AI models.
-* **Cost Efficiency:** The n8n workflow explicitly sets `"only_need_context": true` in its HTTP request to LightRAG. This ensures that LightRAG only performs the efficient retrieval step (using embedding models) and **avoids a redundant, expensive LLM generation call** on its end. The main LLM for generating the final answer is handled once by the n8n AI Agent.
+* **LightRAG `.env`:**
+
+  * `LLM_MODEL=gpt-4o-mini`
+  * `EMBEDDING_MODEL=text-embedding-3-small`
+* **Cost Optimization:**
+  Using `"only_need_context": true` ensures LightRAG skips the LLM generation step — cutting API costs while maintaining full retrieval accuracy.
 
 ---
+
+## 👨‍💻 Author
+
+**Mostafa Arafa**
+AI Engineer • Automation Enthusiast • Formula Student Alumni
+🔗 [GitHub](https://github.com/mostafa7arafa)
+
+---
+
+## 🏁 License
+
+MIT License © 2025 Mostafa Arafa
