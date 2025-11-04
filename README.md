@@ -24,7 +24,7 @@ By using LightRAG, this agent can understand the *structure* of the rules, not j
 ## 🤖 Tech Stack
 
 * **AI Agent Orchestration:** [n8n](https://n8n.io/)
-* **Knowledge Base & Graph RAG:** [LightRAG](https://github.com/YourLightRAGRepoLinkHere) (Ensure this link is correct for your LightRAG setup if it's a fork or custom version)
+* **Knowledge Base & Graph RAG:** [LightRAG](https://github.com/HKUDS/LightRAG)
 * **Large Language Model (LLM):** OpenAI `gpt-4o-mini`
 * **Embedding Model:** OpenAI `text-embedding-3-small`
 * **Containerization:** Docker & Docker Compose
