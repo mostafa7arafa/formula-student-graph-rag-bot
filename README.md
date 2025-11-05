@@ -72,7 +72,7 @@ You’ll need:
 ```bash
 git clone https://github.com/mostafa7arafa/formula-student-graph-rag-bot.git
 cd formula-student-graph-rag-bot
-cp .env.example .env
+cp env.example .env
 ```
 
 Edit `.env` to add your OpenAI key:
